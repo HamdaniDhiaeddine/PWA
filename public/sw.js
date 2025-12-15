@@ -3,10 +3,11 @@ const RUNTIME_CACHE = 'animalcare-runtime';
 const API_CACHE = 'animalcare-api';
 
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
+  '/', 
   '/manifest.json',
-  '/styles.css',
+  '/225.jpg',
+  '/512.png',
+  '/screenshot-mobile.png'
 ];
 
 // Install event - cache static assets
