@@ -1,46 +1,88 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 interface AnimalCardProps {
+  id: string;
   name: string;
   species: string;
   image: string;
   age: string;
   delay?: number;
 }
+
 export function AnimalCard({
+  id,
   name,
   species,
   image,
   age,
   delay = 0
 }: AnimalCardProps) {
-  return <motion.div initial={{
-    opacity: 0,
-    scale: 0.95
-  }} animate={{
-    opacity: 1,
-    scale: 1
-  }} whileHover={{
-    y: -8,
-    transition: {
-      duration: 0.3
-    }
-  }} transition={{
-    duration: 0.5,
-    delay
-  }} className="group relative bg-white rounded-3xl overflow-hidden shadow-lg shadow-emerald-900/5 border border-emerald-100/50">
+  const navigate = useNavigate();
+  const [isFavorite, setIsFavorite] = React.useState(false);
+
+  const handleCardClick = () => {
+    navigate(`/animals/${id}`);
+  };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFavorite(!isFavorite);
+  };
+
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        scale: 0.95,
+      }}
+      animate={{
+        opacity: 1,
+        scale:  1,
+      }}
+      whileHover={{
+        y: -8,
+        transition:  {
+          duration: 0.3,
+        },
+      }}
+      transition={{
+        duration:  0.5,
+        delay,
+      }}
+      onClick={handleCardClick}
+      className="group relative bg-white rounded-3xl overflow-hidden shadow-lg shadow-emerald-900/5 border border-emerald-100/50 cursor-pointer"
+    >
       {/* Image Container with Organic Shape Mask */}
       <div className="relative h-64 overflow-hidden">
         <div className="absolute inset-0 bg-emerald-900/10 z-10 group-hover:bg-transparent transition-colors duration-500" />
-        <img src={image} alt={name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" />
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
+        />
 
         {/* Decorative Frame Overlay */}
         <div className="absolute inset-0 border-[12px] border-white/30 z-20 rounded-3xl pointer-events-none" />
 
-        <button className="absolute top-4 right-4 z-30 bg-white/80 backdrop-blur-sm p-2.5 rounded-full text-emerald hover:bg-emerald hover:text-white transition-colors duration-300 shadow-sm" aria-label={`Like ${name}`}>
-          <Heart size={18} />
-        </button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleFavoriteClick}
+          className="absolute top-4 right-4 z-30 bg-white/80 backdrop-blur-sm p-2.5 rounded-full transition-colors duration-300 shadow-sm hover:bg-white"
+          aria-label={`Like ${name}`}
+        >
+          <Heart
+            size={18}
+            className={
+              isFavorite
+                ?  'fill-red-500 text-red-500'
+                : 'text-emerald'
+            }
+          />
+        </motion.button>
       </div>
 
       <div className="p-6 relative">
@@ -64,11 +106,12 @@ export function AnimalCard({
 
           <div className="mt-4 pt-4 border-t border-emerald-50 flex justify-between items-center">
             <span className="text-xs font-semibold tracking-wider text-emerald-light uppercase">
-              Next Checkup
+              View Details
             </span>
-            <span className="text-sm font-medium text-forest">Oct 24</span>
+            <span className="text-sm font-medium text-forest">→</span>
           </div>
         </div>
       </div>
-    </motion.div>;
+    </motion.div>
+  );
 }

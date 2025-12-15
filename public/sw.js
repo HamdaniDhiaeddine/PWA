@@ -40,47 +40,47 @@ self.addEventListener('activate', event => {
 // Fetch event - implement caching strategies
 self.addEventListener('fetch', event => {
   const { request } = event;
+
+  if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // API calls - Network first, fallback to cache
+  // API - Network First
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const cache = caches.open(API_CACHE);
-            cache.then(c => c.put(request, response.clone()));
-          }
-          return response;
+        .then(networkResponse => {
+          const responseClone = networkResponse.clone();
+
+          caches.open(API_CACHE).then(cache => {
+            cache.put(request, responseClone);
+          });
+
+          return networkResponse;
         })
-        .catch(() => {
-          return caches.match(request);
-        })
+        .catch(() => caches.match(request))
     );
     return;
   }
 
-  // Static assets - Cache first
+  // Static / runtime - Cache First
   event.respondWith(
-    caches.match(request).then(cached => {
-      return (
-        cached ||
-        fetch(request).then(response => {
-          if (response.ok) {
-            const cache = caches.open(RUNTIME_CACHE);
-            cache. then(c => c.put(request, response.clone()));
-          }
-          return response;
-        })
-      );
+    caches.match(request).then(cachedResponse => {
+      if (cachedResponse) return cachedResponse;
+
+      return fetch(request).then(networkResponse => {
+        const responseClone = networkResponse.clone();
+
+        caches.open(RUNTIME_CACHE).then(cache => {
+          cache.put(request, responseClone);
+        });
+
+        return networkResponse;
+      });
     })
   );
 });
+
 
 // Background sync for offline actions
 self.addEventListener('sync', event => {

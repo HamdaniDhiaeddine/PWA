@@ -67,7 +67,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const animal = await Animal.findOne({
-      _id: req.params. id,
+      _id: req.params.id,
       userId: (req as any).user.id,
     });
 
@@ -87,7 +87,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res:  Response) => {
   try {
     const result = await Animal.deleteOne({
-      _id: req.params. id,
+      _id: req.params.id,
       userId: (req as any).user.id,
     });
 
