@@ -20,7 +20,8 @@ export function AddEditAnimal() {
     color: '',
     medicalHistory: '',
     vaccinations: '',
-    image: null as string | null,
+    image: null as File | null,        // ← CHANGED: File object
+    imagePreview: null as string | null, // ← NEW: Preview only
   });
 
   const [isLoading, setIsLoading] = useState(isEditMode);
@@ -34,26 +35,28 @@ export function AddEditAnimal() {
   }, [id, isEditMode]);
 
   const loadAnimal = async () => {
-    try {
-      setIsLoading(true);
-      const animal = await apiService.getAnimal(id! );
-      setFormData({
-        name: animal.name,
-        species: animal.species,
-        breed: animal.breed,
-        dateOfBirth: animal.dateOfBirth. split('T')[0],
-        weight: animal.weight. toString(),
-        color: animal. color,
-        medicalHistory:  animal.medicalHistory,
-        vaccinations: animal.vaccinations. join(', '),
-        image: null,
-      });
-    } catch (err:  any) {
-      setError('Failed to load animal data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    setIsLoading(true);
+    const animal = await apiService.getAnimal(id!);
+    setFormData({
+      name: animal.name,
+      species: animal.species,
+      breed: animal.breed,
+      dateOfBirth: animal.dateOfBirth.split('T')[0],
+      weight: animal.weight.toString(),
+      color: animal.color || '',
+      medicalHistory: animal.medicalHistory || '',
+      vaccinations: Array.isArray(animal.vaccinations) ? animal.vaccinations.join(', ') : '',
+      image: null,
+      imagePreview: animal.imageUrl ? `http://localhost:5000${animal.imageUrl}` : null,  // ← FIX: Full URL
+    });
+  } catch (err: any) {
+    setError('Failed to load animal data');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -68,59 +71,77 @@ export function AddEditAnimal() {
     setError('');
   };
 
-  const handleImageUpload = (e: React. ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
+  // ← UPDATED: Handle actual file + preview
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          imagePreview: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+      
+      // Store File for upload
       setFormData(prev => ({
         ...prev,
-        image: reader.result as string,
+        image: file,
       }));
-    };
-    reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSaving(true);
+  setError('');
+
+  try {
+    if (!formData.name || !formData.breed || !formData.dateOfBirth || !formData.weight) {
+      setError('Please fill in all required fields');
+      setIsSaving(false);
+      return;
+    }
+
+    const submitData = new FormData();
+    submitData.append('name', formData.name);
+    submitData.append('species', formData.species);
+    submitData.append('breed', formData.breed);
+    submitData.append('dateOfBirth', formData.dateOfBirth);
+    submitData.append('weight', formData.weight);
+    submitData.append('color', formData.color || '');
+    submitData.append('medicalHistory', formData.medicalHistory || '');
+    
+    // ← FIX: Parse vaccinations properly for backend
+    const vaccinationsArray = formData.vaccinations
+      .split(',')
+      .map(v => v.trim())
+      .filter(v => v);
+    submitData.append('vaccinations', JSON.stringify(vaccinationsArray));
+
+    if (formData.image) {
+      submitData.append('image', formData.image);
+    }
+
+    console.log('Submitting FormData...'); // DEBUG
+
+    if (isEditMode && id) {
+      await apiService.updateAnimal(id!, submitData);
+    } else {
+      await apiService.createAnimal(submitData);
+    }
+
+    navigate('/animals');
+  } catch (err: any) {
+    console.error('Submit error:', err);
+    setError(err.message || 'Failed to save animal');
+  } finally {
+    setIsSaving(false);
   }
 };
 
-  const handleSubmit = async (e:  React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setError('');
-
-    try {
-      if (! formData.name || !formData. breed || !formData.dateOfBirth || !formData.weight) {
-        setError('Please fill in all required fields');
-        setIsSaving(false);
-        return;
-      }
-
-      const animalData = {
-        name:  formData.name,
-        species: formData.species,
-        breed: formData.breed,
-        dateOfBirth: formData.dateOfBirth,
-        weight: parseFloat(formData.weight),
-        color: formData.color,
-        medicalHistory: formData.medicalHistory,
-        vaccinations: formData.vaccinations
-          . split(',')
-          .map(v => v.trim())
-          .filter(v => v),
-      };
-
-      if (isEditMode) {
-        await apiService.updateAnimal(id!, animalData);
-      } else {
-        await apiService.createAnimal(animalData);
-      }
-
-      navigate('/animals');
-    } catch (err: any) {
-      setError(err.message || 'Failed to save animal');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -161,7 +182,7 @@ export function AddEditAnimal() {
           }}
           animate={{
             opacity: 1,
-            y:  0,
+            y: 0,
           }}
           className="space-y-6"
           onSubmit={handleSubmit}
@@ -169,7 +190,7 @@ export function AddEditAnimal() {
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity:  1, y: 0 }}
+              animate={{ opacity: 1, y: 0 }}
               className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700"
             >
               <AlertCircle size={20} className="flex-shrink-0" />
@@ -177,13 +198,13 @@ export function AddEditAnimal() {
             </motion.div>
           )}
 
-          {/* Photo Upload */}
+          {/* ← UPDATED: Image Preview */}
           <div className="flex justify-center mb-8">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full bg-white border-2 border-dashed border-emerald-200 flex items-center justify-center overflow-hidden">
-                {formData.image ?  (
+                {formData.imagePreview ? (
                   <img
-                    src={formData.image}
+                    src={formData.imagePreview}
                     alt="Preview"
                     className="w-full h-full object-cover"
                   />
@@ -203,6 +224,7 @@ export function AddEditAnimal() {
             </div>
           </div>
 
+          {/* Rest of your form fields - NO CHANGES NEEDED */}
           <div className="space-y-4">
             {/* Name */}
             <div className="space-y-2">
@@ -230,7 +252,7 @@ export function AddEditAnimal() {
                   name="species"
                   value={formData.species}
                   onChange={handleChange}
-                  className="w-full bg-white border border-emerald-100 rounded-2xl py-3 px-4 text-forest focus:border-emerald focus: ring-1 focus:ring-emerald outline-none transition-all appearance-none"
+                  className="w-full bg-white border border-emerald-100 rounded-2xl py-3 px-4 text-forest focus:border-emerald focus:ring-1 focus:ring-emerald outline-none transition-all appearance-none"
                 >
                   <option value="Dog">Dog</option>
                   <option value="Cat">Cat</option>
@@ -252,7 +274,7 @@ export function AddEditAnimal() {
                   required
                   value={formData.breed}
                   onChange={handleChange}
-                  className="w-full bg-white border border-emerald-100 rounded-2xl py-3 px-4 text-forest focus: border-emerald focus:ring-1 focus:ring-emerald outline-none transition-all"
+                  className="w-full bg-white border border-emerald-100 rounded-2xl py-3 px-4 text-forest focus:border-emerald focus:ring-1 focus:ring-emerald outline-none transition-all"
                   placeholder="e.g. Golden Retriever"
                 />
               </div>

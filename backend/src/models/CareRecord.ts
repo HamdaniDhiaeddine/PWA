@@ -22,13 +22,13 @@ const careRecordSchema = new Schema<ICareRecord>(
       required: true,
     },
     userId: {
-      type:  Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
     careType: {
       type: String,
-      required:  true,
+      required: true,
       enum: ['feeding', 'grooming', 'exercise', 'medication', 'veterinary'],
     },
     date: {
@@ -38,7 +38,7 @@ const careRecordSchema = new Schema<ICareRecord>(
     },
     notes: {
       type: String,
-      default:  '',
+      default: '',
     },
     nextDue: {
       type: Date,

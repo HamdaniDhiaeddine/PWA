@@ -1,10 +1,9 @@
 import express, { Router, Request, Response } from 'express';
-import { CareRecord } from '../models/CareRecord.js';
-import { authenticate } from '../middleware/auth.js';
+import { CareRecord } from '../models/CareRecord';
+import { authenticate } from '../middleware/auth';
 
 const router: Router = express.Router();
 
-// Middleware to check authentication
 router.use(authenticate);
 
 // GET all care records for authenticated user
@@ -12,12 +11,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { animalId } = req.query;
     
-    const query:  any = { userId: (req as any).user.id };
+    const query: any = { userId: req.user!.id };
     if (animalId) {
       query.animalId = animalId;
     }
 
-    const careRecords = await CareRecord.find(query).populate('animalId');
+    const careRecords = await CareRecord.find(query).populate('animalId').sort({ date: -1 });
     res.json(careRecords);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching care records', error });
@@ -28,8 +27,8 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const record = await CareRecord.findOne({
-      _id: req. params.id,
-      userId: (req as any).user.id,
+      _id: req.params.id,
+      userId: req.user!.id,
     }).populate('animalId');
 
     if (!record) {
@@ -53,16 +52,16 @@ router.post('/', async (req: Request, res: Response) => {
 
     const newRecord = new CareRecord({
       animalId,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
       careType,
-      date:  date || new Date(),
+      date: date || new Date(),
       notes,
       nextDue,
       completedBy,
     });
 
     const savedRecord = await newRecord.save();
-    const populatedRecord = await savedRecord.populate('animalId');
+    const populatedRecord = await CareRecord.findById(savedRecord._id).populate('animalId');
     res.status(201).json(populatedRecord);
   } catch (error) {
     res.status(500).json({ message: 'Error creating care record', error });
@@ -74,7 +73,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const record = await CareRecord.findOne({
       _id: req.params.id,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
     });
 
     if (!record) {
@@ -82,8 +81,8 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     Object.assign(record, req.body);
-    const updatedRecord = await record. save();
-    const populatedRecord = await updatedRecord.populate('animalId');
+    const updatedRecord = await record.save();
+    const populatedRecord = await CareRecord.findById(updatedRecord._id).populate('animalId');
     res.json(populatedRecord);
   } catch (error) {
     res.status(500).json({ message: 'Error updating care record', error });
@@ -91,15 +90,15 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE care record
-router. delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const result = await CareRecord.deleteOne({
       _id: req.params.id,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
     });
 
     if (result.deletedCount === 0) {
-      return res. status(404).json({ message: 'Care record not found' });
+      return res.status(404).json({ message: 'Care record not found' });
     }
 
     res.json({ message: 'Care record deleted successfully' });

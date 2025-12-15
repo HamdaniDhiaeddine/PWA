@@ -1,16 +1,16 @@
 import express, { Router, Request, Response } from 'express';
-import { Animal, IAnimal } from '../models/Animal.js';
-import { authenticate } from '../middleware/auth.js';
+import { Animal, IAnimal } from '../models/Animal';
+import { authenticate } from '../middleware/auth';
+import { upload } from '../middleware/upload';
 
 const router: Router = express.Router();
 
-// Middleware to check authentication
 router.use(authenticate);
 
 // GET all animals for the authenticated user
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const animals = await Animal.find({ userId: (req as any).user.id });
+    const animals = await Animal.find({ userId: req.user!.id }).sort({ createdAt: -1 });
     res.json(animals);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching animals', error });
@@ -18,11 +18,11 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET single animal by ID
-router.get('/:id', async (req:  Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const animal = await Animal.findOne({
       _id: req.params.id,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
     });
 
     if (!animal) {
@@ -36,7 +36,7 @@ router.get('/:id', async (req:  Request, res: Response) => {
 });
 
 // POST create new animal
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticate, upload.single('image'), async (req: any, res: Response) => {
   try {
     const { name, species, breed, dateOfBirth, weight, color, medicalHistory, vaccinations } = req.body;
 
@@ -45,15 +45,16 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const newAnimal = new Animal({
-      userId: (req as any).user.id,
+      userId: req.user!.id,
       name,
       species,
       breed,
-      dateOfBirth,
-      weight,
+      dateOfBirth: new Date(dateOfBirth),
+      weight: parseFloat(weight),
       color,
       medicalHistory,
-      vaccinations:  vaccinations || [],
+      vaccinations: vaccinations ? JSON.parse(vaccinations) : [],
+      imageUrl: req.file ? `/uploads/${req.file.filename}` : '' 
     });
 
     const savedAnimal = await newAnimal.save();
@@ -68,7 +69,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const animal = await Animal.findOne({
       _id: req.params.id,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
     });
 
     if (!animal) {
@@ -84,11 +85,11 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE animal
-router.delete('/:id', async (req: Request, res:  Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const result = await Animal.deleteOne({
       _id: req.params.id,
-      userId: (req as any).user.id,
+      userId: req.user!.id,
     });
 
     if (result.deletedCount === 0) {

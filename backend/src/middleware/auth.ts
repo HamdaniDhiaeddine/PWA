@@ -1,23 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+interface UserPayload {
+  id: string;
+  email: string;
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: UserPayload;
     }
   }
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers. authorization?.split(' ')[1];
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
 
   try {
-    const decoded = jwt. verify(token, process.env. JWT_SECRET || 'secret');
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+    
+    const decoded = jwt.verify(token, secret) as UserPayload;
     req.user = decoded;
     next();
   } catch (error) {

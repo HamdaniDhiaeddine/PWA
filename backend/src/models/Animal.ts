@@ -3,13 +3,14 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IAnimal extends Document {
   userId: mongoose.Types.ObjectId;
   name: string;
+  imageUrl: string;
   species: string;
   breed: string;
   dateOfBirth: Date;
   weight: number;
   color: string;
   medicalHistory: string;
-  vaccinations:  string[];
+  vaccinations: string[];
   lastCheckup?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -27,19 +28,23 @@ const animalSchema = new Schema<IAnimal>(
       required: true,
       trim: true,
     },
+    imageUrl: {
+        type: String,
+        default: '',
+    },
     species: {
-      type:  String,
+      type: String,
       required: true,
       enum: ['Dog', 'Cat', 'Bird', 'Rabbit', 'Hamster', 'Guinea Pig', 'Other'],
     },
-    breed:  {
+    breed: {
       type: String,
       required: true,
       trim: true,
     },
     dateOfBirth: {
       type: Date,
-      required:  true,
+      required: true,
     },
     weight: {
       type: Number,

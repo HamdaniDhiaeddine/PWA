@@ -2,9 +2,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import animalRoutes from '../routes/animals.js';
-import careRoutes from '../routes/care.js';
-import authRoutes from '../routes/auth.js';
+import animalRoutes from './routes/animals';
+import careRoutes from './routes/care';
+import authRoutes from './routes/auth';
 
 dotenv.config();
 
@@ -17,6 +17,8 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/animalcare')
