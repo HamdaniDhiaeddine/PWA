@@ -1,54 +1,57 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import bcryptjs from 'bcryptjs';
 
-export type CareType = 'feeding' | 'grooming' | 'exercise' | 'medication' | 'veterinary';
-
-export interface ICareRecord extends Document {
-  animalId: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId;
-  careType: CareType;
-  date: Date;
-  notes: string;
-  nextDue?: Date;
-  completedBy?: string;
+export interface IUser extends Document {
+  name: string;
+  email:  string;
+  password: string;
   createdAt: Date;
   updatedAt: Date;
+  comparePassword(password: string): Promise<boolean>;
 }
 
-const careRecordSchema = new Schema<ICareRecord>(
+const userSchema = new Schema<IUser>(
   {
-    animalId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Animal',
-      required: true,
-    },
-    userId: {
-      type:  Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    careType: {
+    name: {
       type: String,
-      required:  true,
-      enum: ['feeding', 'grooming', 'exercise', 'medication', 'veterinary'],
-    },
-    date: {
-      type: Date,
       required: true,
-      default: Date.now,
+      trim:  true,
     },
-    notes: {
+    email: {
       type: String,
-      default:  '',
+      required: true,
+      unique: true,
+      lowercase:  true,
+      match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
     },
-    nextDue: {
-      type: Date,
-    },
-    completedBy: {
+    password: {
       type: String,
-      trim: true,
+      required: true,
+      minlength: 6,
+      select:  false,
     },
   },
   { timestamps: true }
 );
 
-export const CareRecord = mongoose.model<ICareRecord>('CareRecord', careRecordSchema);
+// Hash password before saving
+userSchema.pre('save', async function (next:  any) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+  
+  try {
+    const salt = await bcryptjs.genSalt(10);
+    this.password = await bcryptjs.hash(this. password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Method to compare passwords
+userSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
+  return await bcryptjs.compare(password, this.password);
+};
+
+export const User = mongoose.model<IUser>('User', userSchema);
